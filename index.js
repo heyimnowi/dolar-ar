@@ -1,15 +1,14 @@
-var dolar = require('dolar-hoy');
-var env = require('dotenv').config();
-var emoji = require('node-emoji');
-var SlackWebhook = require('slack-webhook');
-var slack = new SlackWebhook(process.env.SLACK_WEBHOOK);
-var currentPrice = 38.29;
-var tolerance = 0.02;
-var interval = 300000; // 5 minutes
-var express = require('express');
-var bodyParser = require('body-parser');
-var app = express();
-var port = process.env.PORT || 8080;
+const env = require('dotenv').config();
+const SlackWebhook = require('slack-webhook');
+const slack = new SlackWebhook(process.env.SLACK_WEBHOOK);
+let currentRate = 38.0;
+const tolerance = 0.02;
+const interval = 300000; // 5 minutes
+const express = require('express');
+const bodyParser = require('body-parser');
+const app = express();
+const port = process.env.PORT || 8080;
+const scrapeIt = require("scrape-it")
 
 //Here we are configuring express to use body-parser as middle-ware.
 app.use(bodyParser.urlencoded({
@@ -28,14 +27,14 @@ app.listen(port, function () {
 });
 
 app.post('/price', function (request, response) {
-  response.end(`1 USD = ${currentPrice} ARS`);
+  response.end(`1 USD = ${currentRate} ARS`);
 });
 
-function getDiff(price) {
-  return (price / currentPrice) - 1;
+getDiff = (rate) => {
+  return (rate / currentRate) - 1;
 }
 
-function getIcon(diff) {
+getIcon = (diff) => {
   return diff < 0 ?
     '⬇️' :
     diff === 0 ?
@@ -43,27 +42,39 @@ function getIcon(diff) {
     '⬆️';
 }
 
-function sendToSlackChannel(price) {
-  const diff = getDiff(price);
-  const icon = getIcon(diff);
-  const msg = `${icon}  1 USD = ${price} ARS`;
-  console.log(msg);
-  slack.send(msg);
-}
-
-app.get('/', function (req, res) {
-  sendToSlackChannel(currentPrice);
-});
-
-function updatePrice(response) {
-  if (response.libre === null || response.libre === undefined) return;
-  const diff = getDiff(response.libre);
-  if (Math.abs(diff) >= tolerance) {
-    sendToSlackChannel(response.libre);
-    currentPrice = response.libre;
+sendToSlackChannel = (msg) => {
+  if (process.env.NODE_ENV === 'production') {
+    slack.send(msg);
   }
 }
 
+app.get('/', (req, res) => {
+  sendToSlackChannel(currentRate);
+});
+
+updateRate = (rate) => {
+  const diff = getDiff(rate);
+  if (Math.abs(diff) >= tolerance) {
+    const diff = getDiff(rate);
+    const icon = getIcon(diff);
+    const msg = `${icon}  1 USD = ${rate} ARS`;
+    console.log(msg);
+    sendToSlackChannel(msg);
+    currentRate = rate;
+  }
+}
+
+getRate = () => {
+  scrapeIt("http://www.dolarhoy.com/", {
+    rate: "body > div > div > div > div.col-md-8 > div:nth-child(2) > div.col-md-6.venta > h4 .pull-right"
+  }).then(({
+    data
+  }) => {
+    const rate = data.rate.substring(2).replace(',', '.');
+    updateRate(Number(rate));
+  })
+}
+
 setInterval(() => {
-  dolar.fetch(updatePrice);
+  getRate();
 }, interval);
