@@ -66,7 +66,7 @@ updateRate = (rate) => {
 
 getRate = () => {
   scrapeIt("http://www.dolarhoy.com/", {
-    rate: "body > div > div > div > div.col-md-8 > div:nth-child(2) > div.col-md-6.venta > h4 .pull-right"
+    rate: ".venta > h4 > span"
   }).then(({
     data
   }) => {
