@@ -1,12 +1,13 @@
 const env = require('dotenv').config();
 const SlackWebhook = require('slack-webhook');
 const slack = new SlackWebhook(process.env.SLACK_WEBHOOK);
-let currentRate = 38.0;
+let currentRates = { bna: { compra: 1, venta: 1 },
+balanz: { compra: 3.5, venta: 4.5 } };
 const tolerance = 0.02;
-const interval = 300000; // 5 minutes
+const interval = 60 * 1000; // 1 minuto
 const axios = require('axios');
 
-const getDiff = (rate) => {
+const getDiff = (rate, currentRate) => {
   return (rate / currentRate) - 1;
 }
 
@@ -24,36 +25,73 @@ const sendToSlackChannel = (msg) => {
   }
 }
 
-const updateRate = (rate) => {
-  const diff = getDiff(rate);
-  if (Math.abs(diff) >= tolerance) {
-    const diff = getDiff(rate);
-    const icon = getIcon(diff);
-    const msg = `${icon}  1 USD = ${rate} ARS`;
-    console.log(msg);
-    sendToSlackChannel(msg);
-    currentRate = rate;
-  }
+const mapRates = _rates => 
+  _rates.reduce((rates, rate) => {
+    const { compra, venta } = rate
+    rates[rate.key] = { compra, venta }
+    return rates
+  }, {})
+
+const updateRate = (rates) => {
+  rates.forEach(rate => {
+    const currentRate = currentRates[rate.key]
+    const diffventa = getDiff(rate.venta, currentRate.venta)
+    const diffcompra = getDiff(rate.compra, currentRate.compra)
+    if (Math.abs(diffventa) >= tolerance || Math.abs(diffcompra) >= tolerance) {
+      const msg = `*${rate.name}:* Compra: ${getIcon(diffcompra)} 1 USD = *${rate.compra} ARS* - Venta: ${getIcon(diffventa)} 1 USD = *${rate.venta} ARS*`;
+      console.log(msg);
+      sendToSlackChannel(msg);
+    }
+  })
+  currentRates = mapRates(rates)
 }
 
-const getRate = () => 
+
+const getCronistaBNRate = url =>
   axios({
-    url: 'https://mercados.ambito.com/dolar/oficial/variacion',
+    url: "https://www.cronista.com/MercadosOnline/json/eccheader.json",
     method: 'get'
   }).then(response => {
-    const rate = +response.data.venta.replace(',', '.')
-    return rate
+    const compra = +response.data.dolarbna.valorcompra
+    const venta = +response.data.dolarbna.valorventa
+    return { compra, venta }
   })
 
+const getCronistaBalanzRate = url =>
+  axios({
+    url: "https://www.cronista.com/_static_rankings/static_dolarbalanz.html",
+    method: 'get'
+  }).then(response => {
+    const compra = +response.data.Cotizacion.PrecioCompra
+    const venta = +response.data.Cotizacion.PrecioVenta
+    return { compra, venta }
+  })
+
+const rateMap = [{
+  key: "bna",
+  name: "BNA",
+  resolver: getCronistaBNRate
+},{
+  key: "balanz",
+  name: "Balanz",
+  resolver: getCronistaBalanzRate
+}]
+
+const getRates = () => 
+  Promise.all(rateMap.map(
+    r => r.resolver().then(rate => ({...rate, key: r.key, name: r.name}))
+  ))
+
 const setInitialRate = () => {
-  getRate().then(rate => {
-    console.log("inital rate", rate)
-    currentRate = rate
+  getRates()
+  .then(rates => {
+    currentRates = mapRates(rates)
+    console.log("inital rates", currentRates)
   })
 }
 
 setInitialRate()
 
 setInterval(() => {
-  getRate().then(updateRate)
+  getRates().then(updateRate)
 }, interval);
