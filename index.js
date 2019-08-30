@@ -1,6 +1,6 @@
 const env = require('dotenv').config();
 const SlackWebhook = require('slack-webhook');
-const slack = new SlackWebhook(process.env.SLACK_WEBHOOK);
+const slack = new SlackWebhook(process.env.SLACK_WEBHOOK || "abc");
 let currentRates = { bna: { compra: 1, venta: 1 },
 balanz: { compra: 3.5, venta: 4.5 } };
 const tolerance = 0.001;
@@ -57,7 +57,7 @@ const getCronistaBNRate = url =>
     return { compra, venta }
   })
 
-const getCronistaBalanzRate = url =>
+const getCronistaBalanzRate = () =>
   axios({
     url: "https://www.cronista.com/_static_rankings/static_dolarbalanz.html",
     method: 'get'
@@ -66,8 +66,19 @@ const getCronistaBalanzRate = url =>
     const venta = +response.data.Cotizacion.PrecioVenta
     return { compra, venta }
   })
-
-const rateMap = [{
+  
+const getCronistaBlueRate = () => 
+  axios({
+    url: "https://www.cronista.com/MercadosOnline/json/getValoresCalculadora.html",
+    method: 'get'
+  }).then(response => {
+    const blue = response.data.find(item => item.Id === 2)
+    const compra = +blue.Compra
+    const venta = +blue.Venta
+    return { compra, venta }
+  })
+    
+  const rateMap = [{
   key: "bna",
   name: "BNA",
   resolver: getCronistaBNRate
@@ -75,6 +86,10 @@ const rateMap = [{
   key: "balanz",
   name: "Balanz",
   resolver: getCronistaBalanzRate
+},{
+  key: "blue",
+  name: "Blue",
+  resolver: getCronistaBlueRate
 }]
 
 const getRates = () => 
