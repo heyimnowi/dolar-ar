@@ -1,8 +1,7 @@
 const env = require('dotenv').config();
 const SlackWebhook = require('slack-webhook');
 const slack = new SlackWebhook(process.env.SLACK_WEBHOOK || "abc");
-let currentRates = { bna: { compra: 1, venta: 1 },
-balanz: { compra: 3.5, venta: 4.5 } };
+let currentRates = {};
 const tolerance = 0.001;
 const interval = 60 * 1000; // 1 minuto
 const axios = require('axios');
