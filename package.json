@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/heyimnowi/dolar-ar#readme",
   "dependencies": {
+    "aws-sdk": "^2.600.0",
     "axios": "^0.19.0",
     "dotenv": "^7.0.0",
     "slack-webhook": "^1.0.0"
