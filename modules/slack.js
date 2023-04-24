@@ -6,7 +6,7 @@ const axios = require('axios');
 
 const sendMessage = async (message) => {
 	try {
-		await axios.post(config.SLACK_INCOMING_WEBHOOK, {
+		await axios.post(process.env.SLACK_INCOMING_WEBHOOK, {
 			text: message
 		});
 	} catch (error) {

@@ -1,13 +1,15 @@
 const dotenv = require('dotenv');
 const express = require('express');
 const bodyParser = require('body-parser');
-const { getRate, getCurrentRateMessage, updateRate } = require('./modules/rate');
+const { getCurrentRateMessage, updateRate } = require('./modules/rate');
 
 const INTERVAL = 1000 * 60 * 1; // 1 minute
 
 const config = dotenv.config().parsed;
 const app = express();
-const port = config.PORT || 9647;
+const port = process.env.PORT || 9647;
+
+console.log(process.env)
 
 // allow us to easily access post request body
 app.use(bodyParser.urlencoded({extended: true}));
