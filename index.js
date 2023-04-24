@@ -1,9 +1,10 @@
-const env = require('dotenv').config();
+const dotenv = require('dotenv');
+dotenv.config();
 const SlackWebhook = require('slack-webhook');
 const slack = new SlackWebhook(process.env.SLACK_WEBHOOK);
-let currentRate = 38.0;
+let currentRate = 440.0;
 const tolerance = 0.02;
-const interval = 300000; // 5 minutes
+const interval = 1000 * 60 * 1; // 1 minute
 const express = require('express');
 const bodyParser = require('body-parser');
 const app = express();
@@ -65,16 +66,18 @@ updateRate = (rate) => {
 }
 
 getRate = () => {
-  scrapeIt("http://www.dolarhoy.com/", {
-    rate: "body > div > div > div > div.col-md-8 > div:nth-child(2) > div.col-md-6.venta > h4 .pull-right"
-  }).then(({
+  console.log('Getting rate...');
+  scrapeIt("https://dolarhoy.com/", {
+    rate: "#home_0 > div.modulo.modulo_bloque > section > div > div > div > div.tile.is-parent.is-9.cotizacion.is-vertical > div > div.tile.is-parent.is-5 > div > div.values > div.venta > div.val"
+  }).then(function ({
     data
-  }) => {
+  }) {
+    console.log('Rate: ', data.rate);
     const rate = data.rate.substring(2).replace(',', '.');
     updateRate(Number(rate));
   })
 }
 
-setInterval(() => {
+setInterval(function () {
   getRate();
 }, interval);
