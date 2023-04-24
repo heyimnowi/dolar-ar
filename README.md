@@ -14,7 +14,6 @@ PORT=your_port
 ```
 
 5. Start the app using `npm start`
-6. Invite the bot to your Slack workspace and send it a direct message with any message to start receiving currency rate updates.
 
 ## Contributing
 
